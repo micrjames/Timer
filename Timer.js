@@ -1,13 +1,13 @@
-const Timer = function(interval) {
-    let timerID;
+class Timer {
+    #timerID;
 
-    this.start = function(callback) {
-	    timerID = setInterval(callback, interval);
-	};
+    start(callback) {
+	    this.#timerID = setInterval(callback, interval);
+	}
 
-    this.cancel = function() {
-	    clearInterval(timerID);
-	};
-};
+    cancel() {
+	    clearInterval(this.#timerID);
+	}
+}
 
 export { Timer };
