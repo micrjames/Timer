@@ -1,8 +1,13 @@
 class Timer {
     #timerID;
+    #interval;
+
+    constructor(interval) {
+	   this.#interval = interval;
+	}
 
     start(callback) {
-	    this.#timerID = setInterval(callback, interval);
+	    this.#timerID = setInterval(callback, this.#interval);
 	}
 
     cancel() {
