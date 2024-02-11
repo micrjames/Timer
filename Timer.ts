@@ -1,6 +1,6 @@
 export class Timer {
-    private timerID: ReturnType<typeof setInterval>;
-    private interval: number;
+    protected timerID: ReturnType<typeof setInterval>;
+    protected interval: number;
 
     constructor(interval: number) {
 	   this.interval = interval;
