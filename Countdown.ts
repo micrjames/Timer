@@ -3,18 +3,21 @@ const { Timer } = require("./Timer");
 export class Countdown extends Timer {
    private secsRemaining: number;
 
-   constructor(secsRemaining: number, doEachSec: (remainingTime: number) => void, doAtEnd: () => void) {
+   constructor(secsRemaining: number, doEachSec?: (remainingTime: number) => void, doAtEnd?: () => void) {
 	  super(1000);
 	  this.secsRemaining = secsRemaining;
 	  super.start(() => {
 		 this.secsRemaining--;
-		 doEachSec(this.secsRemaining);
-		 if(this.secsRemaining < 1) {
+		 if(doEachSec) doEachSec(this.secsRemaining);
+		 if(this.secsRemaining == 0) {
 			super.cancel();
 				 
 			// countdown is over when the timer clock runs out
-			doAtEnd();
+			if(doAtEnd) doAtEnd();
 		 }
 	  });
+   }
+   get seconds(): number {
+	  return this.secsRemaining;
    }
 }
