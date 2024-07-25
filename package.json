@@ -1,5 +1,5 @@
 {
-  "name": "Timet",
+  "name": "Timer",
   "version": "1.0.0",
   "description": "A Timer object that allows a user to start and cancel the timer, do something when the timer starts.",
   "main": "index.js",
