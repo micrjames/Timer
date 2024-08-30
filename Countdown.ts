@@ -1,4 +1,4 @@
-const { Timer } = require("./Timer");
+import { Timer } from "./Timer";
 
 export class Countdown extends Timer {
    private secsRemaining: number;
