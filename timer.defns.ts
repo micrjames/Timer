@@ -11,7 +11,7 @@ interface TimerEvents {
 }
 
 interface TimerConfig {
-	intervalMs: number;
+	intervalMS: number;
 	autoStart?: boolean;
 }
 

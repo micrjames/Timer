@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A Timer object that allows a user to start and cancel the timer, do something when the timer starts.",
   "main": "index.js",
-   "directories": {
+  "directories": {
     "test": "tests"
   },
   "scripts": {
@@ -16,6 +16,7 @@
     "@babel/core": "^7.23.5",
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-typescript": "^7.23.3",
+    "@types/node": "^22.13.14",
     "babel-jest": "^29.7.0",
     "jest": "^29.7.0"
   },
