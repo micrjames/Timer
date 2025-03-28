@@ -3,12 +3,13 @@ import { TimerState, TimerEvents, Logger, TimerConfig, TimerError } from "./time
 export class Timer {
 	private timerId: NodeJS.Timeout | null;
 	private readonly intervalMS: number;
-	private state: TimerState = TimerState.STOPPED;
+	private state: TimerState;
 	private readonly events: TimerEvents;
 	private readonly logger?: Logger;
 
     constructor(config: TimerConfig, events: TimerEvents = {}, logger ?: Logger) {
 		this.timerId = null;
+		this.state = TimerState.STOPPED;
 		this.validateConfig(config);
 		this.intervalMS = config.intervalMS;
 		this.events = events;
