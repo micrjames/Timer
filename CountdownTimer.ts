@@ -1,8 +1,7 @@
 import { Timer } from "./Timer";
 import { TimerEvents, TimerState, TimerError } from "./timer.defns";
 
-
-export class Countdowntimer {
+export class CountdownTimer {
 	private readonly timer: Timer;
 	private remainingMS: number;
 	private readonly initialMS: number;
