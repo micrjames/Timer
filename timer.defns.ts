@@ -7,6 +7,8 @@ enum TimerState {
 interface TimerEvents {
 	onStart?: () => void;
 	onStop?: () => void;
+	onPause?: () => void;
+	onResume?: () => void;
 	onError?: (error: Error) => void;
 }
 
