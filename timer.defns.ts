@@ -10,6 +10,7 @@ interface TimerEvents {
 	onPause?: () => void;
 	onResume?: () => void;
 	onError?: (error: Error) => void;
+	onTick?: (seconds: number) => void;
 }
 
 interface TimerConfig {
