@@ -6,6 +6,8 @@ export class Timer {
 	private state: TimerState;
 	private readonly events: TimerEvents;
 	private readonly logger?: Logger;
+	private elapsedMS: number;
+	private lastTick: number;
 
     constructor(config: TimerConfig, events: TimerEvents = {}, logger ?: Logger) {
 		this.timerId = null;
@@ -14,6 +16,8 @@ export class Timer {
 		this.intervalMS = config.intervalMS;
 		this.events = events;
 		this.logger = logger;
+		this.elapsedMS = 0;
+		this.lastTick = 0;
 		if(config.autoStart) this.start(() => {});
 	}
 
@@ -45,7 +49,11 @@ export class Timer {
 		}
 
 		this.state = TimerState.RUNNING;
+		this.lastTick = Date.now();
 		this.timerId = setInterval(() => {
+			const now = Date.now();
+			this.elapsedMS += now - this.lastTick;
+			this.lastTick = now;
 			try {
 				callback();
 				this.logger?.log('Timer tick');
@@ -61,6 +69,47 @@ export class Timer {
 		return this.stop.bind(this);
 	}
 
+	public pause(): void {
+		if (this.state !== TimerState.RUNNING) {
+		  const error = new TimerError(`Cannot pause: timer is ${this.state}`);
+		  this.events.onError?.(error);
+		  this.logger?.error('Pause failed', error);
+		  return;
+		}
+		if (this.timerId !== null) {
+		  clearInterval(this.timerId);
+		  this.timerId = null;
+		}
+		this.state = TimerState.PAUSED;
+		this.events.onPause?.();
+		this.logger?.log('Timer paused');
+    }
+	public resume(callback: () => void): void {
+		if (this.state !== TimerState.PAUSED) {
+		  const error = new TimerError(`Cannot resume: timer is ${this.state}`);
+		  this.events.onError?.(error);
+		  this.logger?.error('Resume failed', error);
+		  return;
+		}
+		this.state = TimerState.RUNNING;
+		this.lastTick = Date.now();
+		this.timerId = setInterval(() => {
+		  const now = Date.now();
+		  this.elapsedMS += now - this.lastTick;
+		  this.lastTick = now;
+		  try {
+			callback();
+			this.logger?.log('Timer tick');
+		  } catch (error) {
+			this.stop();
+			this.events.onError?.(error instanceof Error ? error : new TimerError('Callback execution failed'));
+			this.logger?.error('Callback error', error instanceof Error ? error : undefined);
+		  }
+		}, this.intervalMS);
+		this.events.onResume?.();
+		this.logger?.log('Timer resumed');
+	}
+
     public stop() {
 		if(this.state === TimerState.STOPPED) {
 			this.events.onError?.(new TimerError('Cannot stop: timer already stopped'));
@@ -71,6 +120,7 @@ export class Timer {
 			clearInterval(this.timerId);
 			this.timerId = null;
 		}
+		this.elapsedMS = 0;
 		this.state = TimerState.STOPPED;
 		this.events.onStop?.();
 		this.logger?.log('Timer stopped');
@@ -78,6 +128,10 @@ export class Timer {
 
 	public getState(): TimerState {
 		return this.state;
+	}
+
+	public getElapsedMS(): number {
+		return Math.floor(this.elapsedMS/1000);
 	}
 
 	public dispose() {
