@@ -1,5 +1,6 @@
 import { Timer } from "../Timer";
 import { TimerState, TimerError } from "../timer.defns";
+import { events } from "./testEvts";
 
 jest.useFakeTimers();
 
@@ -12,7 +13,8 @@ describe('Timer', () => {
 	let timer: Timer;
 
 	beforeEach(() => {
-		timer = new Timer({ intervalMS: 1000 }, {}, mockLogger);
+		jest.clearAllMocks();
+		timer = new Timer({ intervalMS: 1000 }, events, mockLogger);
 	});
 	afterEach(() => {
 		timer.dispose();
@@ -42,7 +44,7 @@ describe('Timer', () => {
 	});
 	test("Should handle callback errors.", () => {
 		const errorCallback = () => { throw new Error('Test error'); };
-		const events = { onError: jest.fn() };
+		// const events = { onError: jest.fn() };
 		timer = new Timer({ intervalMS: 1000 }, events, mockLogger);
 		timer.start(errorCallback);
 		jest.advanceTimersByTime(1000);
@@ -50,5 +52,28 @@ describe('Timer', () => {
 		const state = timer.getState();
 		const expectedState = TimerState.STOPPED;
 		expect(state).toBe(expectedState);
+	});
+	test('should pause and resume', () => {
+		timer.start(() => {});
+		jest.advanceTimersByTime(2000);
+		timer.pause();
+		expect(timer.getState()).toBe(TimerState.PAUSED);
+		expect(events.onPause).toHaveBeenCalled();
+		jest.advanceTimersByTime(2000);
+		expect(timer.getElapsedMS()).toBe(2);
+		timer.resume(() => {});
+		jest.advanceTimersByTime(2000);
+		expect(events.onResume).toHaveBeenCalled();
+		expect(timer.getElapsedMS()).toBe(4);
+	});
+	test('should not pause when stopped', () => {
+		timer.pause();
+		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
+	});
+
+	test('should not resume when running', () => {
+		timer.start(() => {});
+		timer.resume(() => {});
+		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
 	});
 });
