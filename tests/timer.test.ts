@@ -57,23 +57,32 @@ describe('Timer', () => {
 		timer.start(() => {});
 		jest.advanceTimersByTime(2000);
 		timer.pause();
-		expect(timer.getState()).toBe(TimerState.PAUSED);
-		expect(events.onPause).toHaveBeenCalled();
+		const state = timer.getState();
+		const expectedState = TimerState.PAUSED;
+		expect(state).toBe(expectedState);
+		const onPauseEvt = events.onPause;
+		expect(onPauseEvt).toHaveBeenCalled();
 		jest.advanceTimersByTime(2000);
-		expect(timer.getElapsedMS()).toBe(2);
+		let elapsedMS = timer.getElapsedMS();
+		expect(elapsedMS).toBe(2);
 		timer.resume(() => {});
 		jest.advanceTimersByTime(2000);
-		expect(events.onResume).toHaveBeenCalled();
-		expect(timer.getElapsedMS()).toBe(4);
+		const onResumeEvt = events.onResume;
+		expect(onResumeEvt).toHaveBeenCalled();
+		expect(elapsedMS).toBe(2);
+		elapsedMS = timer.getElapsedMS();
+		expect(elapsedMS).toBe(4);
 	});
 	test('should not pause when stopped', () => {
 		timer.pause();
-		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
+		const onErrorEvt = events.onError;
+		expect(onErrorEvt).toHaveBeenCalledWith(expect.any(TimerError));
 	});
 
 	test('should not resume when running', () => {
 		timer.start(() => {});
 		timer.resume(() => {});
-		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
+		const onErrorEvt = events.onError;
+		expect(onErrorEvt).toHaveBeenCalledWith(expect.any(TimerError));
 	});
 });
