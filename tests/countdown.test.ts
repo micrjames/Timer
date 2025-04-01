@@ -43,11 +43,14 @@ describe("CountdownTimer", () => {
 		countdown.start();
 		jest.advanceTimersByTime(2000);
 		countdown.pause();
-		expect(countdown.getRemainingSeconds()).toBe(3);
+		let remainingSeconds = countdown.getRemainingSeconds();
+		expect(remainingSeconds).toBe(3);
 		jest.advanceTimersByTime(2000);
-		expect(countdown.getRemainingSeconds()).toBe(3);
+		remainingSeconds = countdown.getRemainingSeconds();
+		expect(remainingSeconds).toBe(3);
 		countdown.resume();
 		jest.advanceTimersByTime(3000);
-		expect(countdown.getRemainingSeconds()).toBe(0);
+		remainingSeconds = countdown.getRemainingSeconds();
+		expect(remainingSeconds).toBe(0);
 	});
 });
