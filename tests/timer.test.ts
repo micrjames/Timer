@@ -1,13 +1,8 @@
 import { Timer } from "../Timer";
 import { TimerState, TimerError } from "../timer.defns";
-import { events } from "./testEvts";
+import { events, mockLogger } from "./test.defns";
 
 jest.useFakeTimers();
-
-const mockLogger = {
-	log: jest.fn(),
-	error: jest.fn()
-};
 
 describe('Timer', () => {
 	let timer: Timer;

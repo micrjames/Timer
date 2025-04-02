@@ -14,7 +14,7 @@ export class CountdownTimer {
 		this.remainingMS = this.initialMS;
 		this.intervalMS = intervalMS;
 		this.events = events;
-		this.timer = new Timer({ intervalMS, autoStart }, events);
+		this.timer = new Timer({ intervalMS, autoStart, maxDurationMS: this.initialMS * 2 }, events);
 		if(autoStart) this.start();
 	}
 
@@ -33,8 +33,19 @@ export class CountdownTimer {
 			this.events.onTick?.(this.getRemainingSeconds());
 			if(this.remainingMS <= 0) {
 				this.timer.stop();
-				this.events.onStop?.();
+				this.events.onComplete?.();
 			}
+		});
+	}
+
+	public async startAsync(): Promise<void> {
+		return this.timer.startAsync(() => {
+		  this.remainingMS -= this.intervalMS;
+		  this.events.onTick?.(this.getRemainingSeconds());
+		  if (this.remainingMS <= 0) {
+			this.timer.stop();
+			this.events.onComplete?.();
+		  }
 		});
 	}
 
@@ -58,8 +69,9 @@ export class CountdownTimer {
 	}
 
 	public reset(): void {
-		this.stop();
+		this.timer.reset();
 		this.remainingMS = this.initialMS;
+		this.events.onReset?.();
 	}
 
 	public getRemainingSeconds(): number {

@@ -9,13 +9,16 @@ interface TimerEvents {
 	onStop?: () => void;
 	onPause?: () => void;
 	onResume?: () => void;
+	onComplete?: () => void;
+	onReset?: () => void;
 	onError?: (error: Error) => void;
-	onTick?: (seconds: number) => void;
+	onTick?: (elapsedSeconds: number) => void;
 }
 
 interface TimerConfig {
 	intervalMS: number;
 	autoStart?: boolean;
+	maxDurationMS?: number;
 }
 
 interface Logger {

@@ -8,12 +8,14 @@ export class Timer {
 	private readonly logger?: Logger;
 	private elapsedMS: number;
 	private lastTick: number;
+	private readonly maxDurationMS: number;
 
     constructor(config: TimerConfig, events: TimerEvents = {}, logger ?: Logger) {
 		this.timerId = null;
 		this.state = TimerState.STOPPED;
 		this.validateConfig(config);
 		this.intervalMS = config.intervalMS;
+		this.maxDurationMS = config.maxDurationMS || Number.MAX_SAFE_INTEGER;
 		this.events = events;
 		this.logger = logger;
 		this.elapsedMS = 0;
@@ -31,6 +33,10 @@ export class Timer {
 			const error = new TimerError('autoStart must be a boolean');
 			this.logger?.error('Invalid autoStart', error);
 			throw error;
+		}
+
+		if (config.maxDurationMS && (!Number.isFinite(config.maxDurationMS) || config.maxDurationMS <= 0)) {
+		  throw new TimerError('Max duration must be a positive finite number');
 		}
 	}
 
@@ -54,8 +60,16 @@ export class Timer {
 			const now = Date.now();
 			this.elapsedMS += now - this.lastTick;
 			this.lastTick = now;
+		    if (this.elapsedMS > this.maxDurationMS) {
+				this.stop();
+				const error = new TimerError('Maximum duration exceeded');
+				this.events.onError?.(error);
+				this.logger?.error('Max duration exceeded', error);
+				return;
+		    }
 			try {
 				callback();
+				this.events.onTick?.(this.getElapsedMS());
 				this.logger?.log('Timer tick');
 			} catch(error) {
 				this.stop();
@@ -97,8 +111,16 @@ export class Timer {
 		  const now = Date.now();
 		  this.elapsedMS += now - this.lastTick;
 		  this.lastTick = now;
+		  if (this.elapsedMS > this.maxDurationMS) {
+			this.stop();
+			const error = new TimerError('Maximum duration exceeded');
+			this.events.onError?.(error);
+			this.logger?.error('Max duration exceeded', error);
+			return;
+		  }
 		  try {
 			callback();
+			this.events.onTick?.(this.getElapsedMS());
 			this.logger?.log('Timer tick');
 		  } catch (error) {
 			this.stop();
@@ -124,6 +146,31 @@ export class Timer {
 		this.state = TimerState.STOPPED;
 		this.events.onStop?.();
 		this.logger?.log('Timer stopped');
+	}
+
+	public async startAsync(callback: () => void): Promise<void> {
+		return new Promise((resolve, reject) => {
+		  try {
+			this.start(() => {
+			  try {
+				callback();
+				if (this.state === TimerState.STOPPED) resolve();
+			  } catch (error) {
+				this.stop();
+				reject(error instanceof Error ? error : new TimerError('Async callback failed'));
+			  }
+			});
+		  } catch (error) {
+			reject(error);
+		  }
+		});
+	}
+
+	public reset(): void {
+		this.stop();
+		this.elapsedMS = 0;
+		this.events.onReset?.();
+		this.logger?.log('Timer reset');
 	}
 
 	public getState(): TimerState {

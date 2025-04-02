@@ -1,5 +1,5 @@
 import { CountdownTimer } from "../CountdownTimer";
-import { events } from "./testEvts";
+import { events } from "./test.defns";
 import {TimerState} from "../timer.defns";
 
 jest.useFakeTimers();
