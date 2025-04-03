@@ -154,12 +154,13 @@ export class Timer {
 			this.start(() => {
 			  try {
 				callback();
-				if (this.state === TimerState.STOPPED) resolve();
+				// if (this.state === TimerState.STOPPED) resolve();
 			  } catch (error) {
 				this.stop();
 				reject(error instanceof Error ? error : new TimerError('Async callback failed'));
 			  }
 			});
+			resolve();
 		  } catch (error) {
 			reject(error);
 		  }

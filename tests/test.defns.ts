@@ -3,7 +3,10 @@ const events = {
 	onStop: jest.fn(),
 	onPause: jest.fn(),
 	onResume: jest.fn(),
-	onError: jest.fn()
+	onReset: jest.fn(),
+	onTick: jest.fn(),
+	onError: jest.fn(),
+	onComplete: jest.fn()
 };
 
 const mockLogger = {

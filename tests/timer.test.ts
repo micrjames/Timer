@@ -2,8 +2,6 @@ import { Timer } from "../Timer";
 import { TimerState, TimerError } from "../timer.defns";
 import { events, mockLogger } from "./test.defns";
 
-jest.useFakeTimers();
-
 describe('Timer', () => {
 	let timer: Timer;
 
@@ -11,8 +9,14 @@ describe('Timer', () => {
 		jest.clearAllMocks();
 		timer = new Timer({ intervalMS: 1000 }, events, mockLogger);
 	});
+	beforeAll(() => {
+		jest.useFakeTimers();
+	});
 	afterEach(() => {
 		timer.dispose();
+	});
+	afterAll(() => {
+		jest.useRealTimers();
 	});
 
 	test("Should initialize with stopped state.", () => {
@@ -79,5 +83,29 @@ describe('Timer', () => {
 		timer.resume(() => {});
 		const onErrorEvt = events.onError;
 		expect(onErrorEvt).toHaveBeenCalledWith(expect.any(TimerError));
+	});
+
+	test('should handle async start', async () => {
+		await timer.startAsync(() => {});
+		jest.advanceTimersByTime(3000);
+		expect(events.onTick).toHaveBeenCalledTimes(3);
+		timer.stop();
+		expect(events.onStop).toHaveBeenCalled();
+	});
+
+	test('should reset', () => {
+		timer.start(() => {});
+		jest.advanceTimersByTime(2000);
+		timer.reset();
+		expect(events.onReset).toHaveBeenCalled();
+		expect(timer.getElapsedMS()).toBe(0);
+	});
+
+	test('should respect max duration', () => {
+		timer = new Timer({ intervalMS: 1000, maxDurationMS: 2000 }, events);
+		timer.start(() => {});
+		jest.advanceTimersByTime(3000);
+		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
+		expect(timer.getState()).toBe(TimerState.STOPPED);
 	});
 });

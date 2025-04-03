@@ -2,16 +2,21 @@ import { CountdownTimer } from "../CountdownTimer";
 import { events } from "./test.defns";
 import {TimerState} from "../timer.defns";
 
-jest.useFakeTimers();
-
 describe("CountdownTimer", () => {
 	let countdown: CountdownTimer;
 
 	beforeEach(() => {
+		jest.clearAllMocks();
 		countdown = new CountdownTimer(5, 1000, events, false);
+	});
+	beforeAll(() => {
+		jest.useFakeTimers();
 	});
 	afterEach(() => {
 		countdown.dispose();
+	});
+	afterAll(() => {
+		jest.useRealTimers();
 	});
 
 	test("Should initialize correctly.", () => {
@@ -52,5 +57,19 @@ describe("CountdownTimer", () => {
 		jest.advanceTimersByTime(3000);
 		remainingSeconds = countdown.getRemainingSeconds();
 		expect(remainingSeconds).toBe(0);
+	});
+
+	test('should handle async start', async () => {
+		await countdown.startAsync();
+		jest.advanceTimersByTime(5000);
+		expect(events.onComplete).toHaveBeenCalled();
+	});
+
+	test('should reset countdown', () => {
+		countdown.start();
+		jest.advanceTimersByTime(2000);
+		countdown.reset();
+		expect(events.onReset).toHaveBeenCalled();
+		expect(countdown.getRemainingSeconds()).toBe(5);
 	});
 });
