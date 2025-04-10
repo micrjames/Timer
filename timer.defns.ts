@@ -13,12 +13,14 @@ interface TimerEvents {
 	onReset?: () => void;
 	onError?: (error: Error) => void;
 	onTick?: (elapsedSeconds: number) => void;
+	onDrift?: (driftMS: number) => void;
 }
 
 interface TimerConfig {
 	intervalMS: number;
 	autoStart?: boolean;
 	maxDurationMS?: number;
+	precision?: boolean;	// High-precision mode
 }
 
 interface Logger {
@@ -33,4 +35,17 @@ class TimerError extends Error {
 	}
 }
 
-export { TimerState, TimerEvents, TimerConfig, Logger, TimerError };
+interface TimerMetrics {
+	totalTicks: number;
+	averageTickMs: number;
+	driftMs: number;
+}
+
+interface TimerSnapshot {
+	state: TimerState;
+	elapsedMs: number;
+	remainingMs?: number;
+	initialMs?: number;
+}
+
+export { TimerState, TimerEvents, TimerConfig, Logger, TimerError, TimerMetrics, TimerSnapshot };
