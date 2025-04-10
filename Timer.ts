@@ -9,6 +9,10 @@ export class Timer {
 	private elapsedMS: number;
 	private lastTick: number;
 	private readonly maxDurationMS: number;
+	private readonly precision: boolean;
+	private tickCount: number;
+	private totalTickTime: number;
+	private lock: boolean;
 
     constructor(config: TimerConfig, events: TimerEvents = {}, logger ?: Logger) {
 		this.timerId = null;
@@ -20,6 +24,10 @@ export class Timer {
 		this.logger = logger;
 		this.elapsedMS = 0;
 		this.lastTick = 0;
+		this.tickCount = 0;
+		this.totalTickTime = 0;
+		this.lock = false;
+		this.precision = config.precision || false;
 		if(config.autoStart) this.start(() => {});
 	}
 
