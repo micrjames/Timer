@@ -1,4 +1,4 @@
-import { TimerState, TimerEvents, Logger, TimerConfig, TimerError } from "./timer.defns";
+import { TimerState, TimerEvents, Logger, TimerConfig, TimerError, TimerMetrics, TimerSnapshot } from "./timer.defns";
 
 export class Timer {
 	private timerId: NodeJS.Timeout | null;
@@ -189,6 +189,40 @@ export class Timer {
 	public getElapsedMS(): number {
 		return Math.floor(this.elapsedMS/1000);
 	}
+
+  private async acquireLock(): Promise<void> {
+    if (this.lock) {
+      throw new TimerError('Operation in progress');
+    }
+    this.lock = true;
+  }
+
+  private releaseLock(): void {
+    this.lock = false;
+  }
+
+  public getMetrics(): TimerMetrics {
+    return {
+      totalTicks: this.tickCount,
+      averageTickMs: this.tickCount > 0 ? this.totalTickTime / this.tickCount : 0,
+      driftMs: this.tickCount > 0 ? (this.tickCount * this.intervalMS - this.elapsedMS) : 0,
+    };
+  }
+
+  public getSnapshot(): TimerSnapshot {
+    return {
+      state: this.state,
+      elapsedMs: this.elapsedMS,
+    };
+  }
+
+  public loadSnapshot(snapshot: TimerSnapshot): void {
+    if (this.state !== TimerState.STOPPED) {
+      throw new TimerError('Can only load snapshot when stopped');
+    }
+    this.state = snapshot.state;
+    this.elapsedMS = snapshot.elapsedMs;
+  }
 
 	public dispose() {
 		this.stop();
