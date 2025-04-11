@@ -48,47 +48,65 @@ export class Timer {
 		}
 	}
 
-    public start(callback: () => void): () => void {
-		if(this.state !== TimerState.STOPPED) {
-			const error = new TimerError(`Cannot start: timer is ${this.state}`);
-			this.events.onError?.(error);
-			this.logger?.error('Start failed', error);
-			throw error;
-		}
-		if(typeof callback !== 'function') {
-			const error = new TimerError('Callback must be a function');
-			this.events.onError?.(error);
-			this.logger?.error('Invalid callback', error);
-			throw error;
-		}
-
-		this.state = TimerState.RUNNING;
-		this.lastTick = Date.now();
-		this.timerId = setInterval(() => {
-			const now = Date.now();
-			this.elapsedMS += now - this.lastTick;
-			this.lastTick = now;
-		    if (this.elapsedMS > this.maxDurationMS) {
-				this.stop();
-				const error = new TimerError('Maximum duration exceeded');
+    public async start(callback: () => void): Promise<() => void> {
+		await this.acquireLock();
+		try {
+			if(this.state !== TimerState.STOPPED) {
+				const error = new TimerError(`Cannot start: timer is ${this.state}`);
 				this.events.onError?.(error);
-				this.logger?.error('Max duration exceeded', error);
-				return;
-		    }
-			try {
-				callback();
-				this.events.onTick?.(this.getElapsedMS());
-				this.logger?.log('Timer tick');
-			} catch(error) {
-				this.stop();
-				const timerError = new TimerError('Callback execution failed');
-				this.events.onError?.(error instanceof Error ? error : timerError);
-				this.logger?.error('Callback error', error instanceof Error ? error: timerError);
+				this.logger?.error('Start failed', error);
+				throw error;
 			}
-		}, this.intervalMS);
-		this.events.onStart?.();
-		this.logger?.log('Timer started');
-		return this.stop.bind(this);
+			if(typeof callback !== 'function') {
+				const error = new TimerError('Callback must be a function');
+				this.events.onError?.(error);
+				this.logger?.error('Invalid callback', error);
+				throw error;
+			}
+			this.state = TimerState.RUNNING;
+			this.lastTick = Date.now();
+			const tick = () => {
+				const now = performance.now();
+				const delta = now - this.lastTick;
+				this.elapsedMS += delta;
+				this.totalTickTime += delta;
+				this.tickCount++;
+				this.lastTick = now;
+				if (this.elapsedMS > this.maxDurationMS) {
+					this.stop();
+					const error = new TimerError('Maximum duration exceeded');
+					this.events.onError?.(error);
+					this.logger?.error('Max duration exceeded', error);
+					return;
+				}
+				const drift = this.precision ? (this.tickCount * this.intervalMS - this.elapsedMS) : 0;
+				if (drift > this.intervalMS / 2) {
+				  this.events.onDrift?.(drift);
+				  this.logger?.log(`Drift detected: ${drift}ms`);
+				}
+
+				try {
+					callback();
+					this.events.onTick?.(this.getElapsedMS());
+					this.logger?.log('Timer tick');
+				} catch(error) {
+					this.stop();
+					const timerError = new TimerError('Callback execution failed');
+					this.events.onError?.(error instanceof Error ? error : timerError);
+					this.logger?.error('Callback error', error instanceof Error ? error: timerError);
+				}
+			};
+			this.timerId = setInterval(tick, this.precision ? this.intervalMS - (this.elapsedMS % this.intervalMS) : this.intervalMS);
+			this.events.onStart?.();
+			this.logger?.log('Timer started');
+			return this.stop.bind(this);
+		} catch(error) {
+		  this.events.onError?.(error instanceof Error ? error : new TimerError('Start failed'));
+		  this.logger?.error('Start error', error instanceof Error ? error : undefined);
+		  throw error;
+		} finally {
+		  this.releaseLock();
+		}
 	}
 
 	public pause(): void {
@@ -157,6 +175,7 @@ export class Timer {
 	}
 
 	public async startAsync(callback: () => void): Promise<void> {
+		/*
 		return new Promise((resolve, reject) => {
 		  try {
 			this.start(() => {
@@ -172,6 +191,17 @@ export class Timer {
 		  } catch (error) {
 			reject(error);
 		  }
+		});
+	   */
+		return new Promise((resolve, reject) => {
+		  this.start(callback).then(() => {
+			const interval = setInterval(() => {
+			  if (this.state === TimerState.STOPPED) {
+				clearInterval(interval);
+				resolve();
+			  }
+			}, 10);
+		  }).catch(reject);
 		});
 	}
 
@@ -190,41 +220,61 @@ export class Timer {
 		return Math.floor(this.elapsedMS/1000);
 	}
 
-  private async acquireLock(): Promise<void> {
-    if (this.lock) {
-      throw new TimerError('Operation in progress');
-    }
-    this.lock = true;
-  }
+	  private async acquireLock(): Promise<void> {
+		if (this.lock) {
+		  throw new TimerError('Operation in progress');
+		}
+		this.lock = true;
+	  }
 
-  private releaseLock(): void {
-    this.lock = false;
-  }
+	  private releaseLock(): void {
+		this.lock = false;
+	  }
 
-  public getMetrics(): TimerMetrics {
-    return {
-      totalTicks: this.tickCount,
-      averageTickMs: this.tickCount > 0 ? this.totalTickTime / this.tickCount : 0,
-      driftMs: this.tickCount > 0 ? (this.tickCount * this.intervalMS - this.elapsedMS) : 0,
-    };
-  }
+	  public getMetrics(): TimerMetrics {
+		return {
+		  totalTicks: this.tickCount,
+		  averageTickMs: this.tickCount > 0 ? this.totalTickTime / this.tickCount : 0,
+		  driftMs: this.tickCount > 0 ? (this.tickCount * this.intervalMS - this.elapsedMS) : 0,
+		};
+	  }
 
-  public getSnapshot(): TimerSnapshot {
-    return {
-      state: this.state,
-      elapsedMs: this.elapsedMS,
-    };
-  }
+	  public getSnapshot(): TimerSnapshot {
+		return {
+		  state: this.state,
+		  elapsedMs: this.elapsedMS,
+		};
+	  }
 
-  public loadSnapshot(snapshot: TimerSnapshot): void {
-    if (this.state !== TimerState.STOPPED) {
-      throw new TimerError('Can only load snapshot when stopped');
-    }
-    this.state = snapshot.state;
-    this.elapsedMS = snapshot.elapsedMs;
-  }
+	  public loadSnapshot(snapshot: TimerSnapshot): void {
+		if (this.state !== TimerState.STOPPED) {
+		  throw new TimerError('Can only load snapshot when stopped');
+		}
+		this.state = snapshot.state;
+		this.elapsedMS = snapshot.elapsedMs;
+	  }
 
 	public dispose() {
 		this.stop();
 	}
+
+  public async setInterval(newIntervalMs: number): Promise<void> {
+    await this.acquireLock();
+    try {
+      if (!Number.isFinite(newIntervalMs) || newIntervalMs <= 0) {
+        throw new TimerError('New interval must be a positive finite number');
+      }
+      if (this.state === TimerState.RUNNING) {
+        throw new TimerError('Cannot change interval while running');
+      }
+      (this as any).intervalMs = newIntervalMs; // Type hack due to readonly
+      this.logger?.log(`Interval changed to ${newIntervalMs}ms`);
+    } catch (error) {
+      this.events.onError?.(error instanceof Error ? error : new TimerError('Set interval failed'));
+      this.logger?.error('Set interval error', error instanceof Error ? error : undefined);
+      throw error;
+    } finally {
+      this.releaseLock();
+    }
+  }
 }
