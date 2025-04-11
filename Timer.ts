@@ -109,69 +109,97 @@ export class Timer {
 		}
 	}
 
-	public pause(): void {
-		if (this.state !== TimerState.RUNNING) {
-		  const error = new TimerError(`Cannot pause: timer is ${this.state}`);
-		  this.events.onError?.(error);
-		  this.logger?.error('Pause failed', error);
-		  return;
-		}
-		if (this.timerId !== null) {
-		  clearInterval(this.timerId);
-		  this.timerId = null;
-		}
-		this.state = TimerState.PAUSED;
-		this.events.onPause?.();
-		this.logger?.log('Timer paused');
-    }
-	public resume(callback: () => void): void {
-		if (this.state !== TimerState.PAUSED) {
-		  const error = new TimerError(`Cannot resume: timer is ${this.state}`);
-		  this.events.onError?.(error);
-		  this.logger?.error('Resume failed', error);
-		  return;
-		}
-		this.state = TimerState.RUNNING;
-		this.lastTick = Date.now();
-		this.timerId = setInterval(() => {
-		  const now = Date.now();
-		  this.elapsedMS += now - this.lastTick;
-		  this.lastTick = now;
-		  if (this.elapsedMS > this.maxDurationMS) {
-			this.stop();
-			const error = new TimerError('Maximum duration exceeded');
+	public async pause(): Promise<void> {
+		await this.acquireLock();
+		try {
+		  if (this.state !== TimerState.RUNNING) {
+			const error = new TimerError(`Cannot pause: timer is ${this.state}`);
 			this.events.onError?.(error);
-			this.logger?.error('Max duration exceeded', error);
+			this.logger?.error('Pause failed', error);
 			return;
 		  }
-		  try {
-			callback();
-			this.events.onTick?.(this.getElapsedMS());
-			this.logger?.log('Timer tick');
-		  } catch (error) {
-			this.stop();
-			this.events.onError?.(error instanceof Error ? error : new TimerError('Callback execution failed'));
-			this.logger?.error('Callback error', error instanceof Error ? error : undefined);
+		  if (this.timerId !== null) {
+			clearInterval(this.timerId);
+			this.timerId = null;
 		  }
-		}, this.intervalMS);
-		this.events.onResume?.();
-		this.logger?.log('Timer resumed');
+		  this.state = TimerState.PAUSED;
+		  this.events.onPause?.();
+		  this.logger?.log('Timer paused');
+		} catch (error) {
+		  this.events.onError?.(error instanceof Error ? error : new TimerError('Pause failed'));
+		  this.logger?.error('Pause error', error instanceof Error ? error : undefined);
+		} finally {
+		  this.releaseLock();
+		}
+    }
+	public async resume(callback: () => void): Promise<void> {
+		await this.acquireLock();
+		try {
+			if (this.state !== TimerState.PAUSED) {
+			  const error = new TimerError(`Cannot resume: timer is ${this.state}`);
+			  this.events.onError?.(error);
+			  this.logger?.error('Resume failed', error);
+			  return;
+			}
+			this.state = TimerState.RUNNING;
+			this.lastTick = performance.now();
+			this.timerId = setInterval(() => {
+				const now = performance.now();
+				this.elapsedMS += now - this.lastTick;
+				this.totalTickTime += now - this.lastTick;
+				this.tickCount++;
+				this.lastTick = now;
+				if (this.elapsedMS > this.maxDurationMS) {
+				  this.stop();
+				  const error = new TimerError('Maximum duration exceeded');
+				  this.events.onError?.(error);
+				  this.logger?.error('Max duration exceeded', error);
+				  return;
+				}
+				try {
+				  callback();
+				  this.events.onTick?.(this.getElapsedMS());
+				  this.logger?.log('Timer tick');
+				} catch (error) {
+				  this.stop();
+				  this.events.onError?.(error instanceof Error ? error : new TimerError('Callback execution failed'));
+				  this.logger?.error('Callback error', error instanceof Error ? error : undefined);
+				}
+			}, this.intervalMS);
+			this.events.onResume?.();
+			this.logger?.log('Timer resumed');
+		} catch (error) {
+		  this.events.onError?.(error instanceof Error ? error : new TimerError('Resume failed'));
+		  this.logger?.error('Resume error', error instanceof Error ? error : undefined);
+		} finally {
+		  this.releaseLock();
+		}
 	}
 
-    public stop() {
-		if(this.state === TimerState.STOPPED) {
+	public async stop(): Promise<void> {
+		await this.acquireLock();
+		try {
+		  if (this.state === TimerState.STOPPED) {
 			this.events.onError?.(new TimerError('Cannot stop: timer already stopped'));
 			this.logger?.log('Stop called on stopped timer');
 			return;
-		}
-		if(this.timerId !== null) {
+		  }
+		  if (this.timerId !== null) {
 			clearInterval(this.timerId);
 			this.timerId = null;
+		  }
+		  this.state = TimerState.STOPPED;
+		  this.elapsedMS = 0;
+		  this.tickCount = 0;
+		  this.totalTickTime = 0;
+		  this.events.onStop?.();
+		  this.logger?.log('Timer stopped');
+		} catch (error) {
+		  this.events.onError?.(error instanceof Error ? error : new TimerError('Stop failed'));
+		  this.logger?.error('Stop error', error instanceof Error ? error : undefined);
+		} finally {
+		  this.releaseLock();
 		}
-		this.elapsedMS = 0;
-		this.state = TimerState.STOPPED;
-		this.events.onStop?.();
-		this.logger?.log('Timer stopped');
 	}
 
 	public async startAsync(callback: () => void): Promise<void> {
@@ -205,11 +233,21 @@ export class Timer {
 		});
 	}
 
-	public reset(): void {
-		this.stop();
-		this.elapsedMS = 0;
-		this.events.onReset?.();
-		this.logger?.log('Timer reset');
+	public async reset(): Promise<void> {
+		await this.acquireLock();
+		try {
+		  this.stop();
+		  this.elapsedMS = 0;
+		  this.tickCount = 0;
+		  this.totalTickTime = 0;
+		  this.events.onReset?.();
+		  this.logger?.log('Timer reset');
+		} catch (error) {
+		  this.events.onError?.(error instanceof Error ? error : new TimerError('Reset failed'));
+		  this.logger?.error('Reset error', error instanceof Error ? error : undefined);
+		} finally {
+		  this.releaseLock();
+		}
 	}
 
 	public getState(): TimerState {
