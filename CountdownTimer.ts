@@ -8,13 +8,13 @@ export class CountdownTimer {
 	private readonly intervalMS: number;
 	private readonly events: TimerEvents;
 
-	constructor(seconds: number, intervalMS: number = 1000, events: TimerEvents = {}, autoStart: boolean = false) {
+	constructor(seconds: number, intervalMS: number = 1000, events: TimerEvents = {}, autoStart: boolean = false, precision: boolean = false) {
 		this.validateInputs(seconds, intervalMS);
 		this.initialMS = seconds * 1000;
 		this.remainingMS = this.initialMS;
 		this.intervalMS = intervalMS;
 		this.events = events;
-		this.timer = new Timer({ intervalMS, autoStart, maxDurationMS: this.initialMS * 2 }, events);
+		this.timer = new Timer({ intervalMS, autoStart, maxDurationMS: this.initialMS * 2, precision }, events);
 		if(autoStart) this.start();
 	}
 
@@ -27,7 +27,7 @@ export class CountdownTimer {
 		}
 	}
 
-	public start(): () => void {
+	public start(): Promise<() => void> {
 		return this.timer.start(() => {
 			this.remainingMS -= this.intervalMS;
 			this.events.onTick?.(this.getRemainingSeconds());
@@ -49,27 +49,28 @@ export class CountdownTimer {
 		});
 	}
 
-	public resume(): void {
-		this.timer.resume(() => {
+	public async resume(): Promise<void> {
+		await this.timer.resume(() => {
 		  this.remainingMS -= this.intervalMS;
 		  this.events.onTick?.(this.getRemainingSeconds());
 		  if (this.remainingMS <= 0) {
 			this.timer.stop();
-			this.events.onStop?.();
+			// this.events.onStop?.();
+			this.events.onComplete?.();
 		  }
 		});
 	}
 
-	public pause() {
-		this.timer.pause();
+	public async pause(): Promise<void> {
+		await this.timer.pause();
 	}
 
-	public stop() {
-		this.timer.stop();
+	public async stop(): Promise<void> {
+		await this.timer.stop();
 	}
 
-	public reset(): void {
-		this.timer.reset();
+	public async reset(): Promise<void> {
+		await this.timer.reset();
 		this.remainingMS = this.initialMS;
 		this.events.onReset?.();
 	}

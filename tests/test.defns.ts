@@ -6,6 +6,7 @@ const events = {
 	onReset: jest.fn(),
 	onTick: jest.fn(),
 	onError: jest.fn(),
+	onDrift: jest.fn(),
 	onComplete: jest.fn()
 };
 

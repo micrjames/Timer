@@ -7,7 +7,7 @@ describe('Timer', () => {
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		timer = new Timer({ intervalMS: 1000 }, events, mockLogger);
+		timer = new Timer({ intervalMS: 1000, precision: true }, events, mockLogger);
 	});
 	beforeAll(() => {
 		jest.useFakeTimers();
@@ -107,5 +107,35 @@ describe('Timer', () => {
 		jest.advanceTimersByTime(3000);
 		expect(events.onError).toHaveBeenCalledWith(expect.any(TimerError));
 		expect(timer.getState()).toBe(TimerState.STOPPED);
+	});
+
+	test('should handle precision timing', async () => {
+		await timer.start(() => {});
+		jest.advanceTimersByTime(5000);
+		const metrics = timer.getMetrics();
+		expect(metrics.totalTicks).toBe(5);
+		expect(metrics.driftMs).toBeLessThan(100);
+	});
+
+	test('should adjust interval', async () => {
+		await timer.setInterval(500);
+		await timer.start(() => {});
+		jest.advanceTimersByTime(2000);
+		expect(events.onTick).toHaveBeenCalledTimes(4);
+	});
+
+	test('should serialize and deserialize', async () => {
+		await timer.start(() => {});
+		jest.advanceTimersByTime(2000);
+		const snapshot = timer.getSnapshot();
+		timer.stop();
+		timer.loadSnapshot(snapshot);
+		expect(timer.getElapsedMS()).toBe(2);
+	});
+
+	test('should prevent concurrent operations', async () => {
+		const promise1 = timer.start(() => {});
+		const promise2 = timer.start(() => {});
+		await expect(promise2).rejects.toThrow(TimerError);
 	});
 });
