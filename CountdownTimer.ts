@@ -1,5 +1,5 @@
 import { Timer } from "./Timer";
-import { TimerEvents, TimerState, TimerError } from "./timer.defns";
+import { TimerEvents, TimerState, TimerError, TimerMetrics, TimerSnapshot } from "./timer.defns";
 
 export class CountdownTimer {
 	private readonly timer: Timer;
@@ -91,7 +91,42 @@ export class CountdownTimer {
 		return Math.floor((this.initialMS - this.remainingMS) / 1000);
 	}
 
+
+	public async setTime(seconds: number): Promise<void> {
+		if (!Number.isFinite(seconds) || seconds <= 0) {
+		  throw new TimerError('Time must be a positive finite number');
+		}
+		await this.timer.reset();
+		this.remainingMS = seconds * 1000;
+		this.initialMS = this.remainingMS;
+	}
+
+	public async setInterval(newIntervalMs: number): Promise<void> {
+		await this.timer.setInterval(newIntervalMs);
+		(this as any).intervalMs = newIntervalMs; // Type hack due to readonly
+	}
+
 	public getProgress(): number {
 		return Math.min(1, Math.max(0, 1 - this.remainingMS / this.initialMS));
+	}
+
+	public getMetrics(): TimerMetrics {
+		return this.timer.getMetrics();
+	}
+
+	public getSnapshot(): TimerSnapshot {
+		return {
+		  ...this.timer.getSnapshot(),
+		  remainingMs: this.remainingMS,
+		  initialMs: this.initialMS,
+		};
+	}
+
+	public loadSnapshot(snapshot: TimerSnapshot): void {
+		this.timer.loadSnapshot(snapshot);
+		if (snapshot.remainingMs !== undefined && snapshot.initialMs !== undefined) {
+		  this.remainingMS = snapshot.remainingMs;
+		  this.initialMS = snapshot.initialMs;
+		}
 	}
 }
