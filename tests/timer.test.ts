@@ -43,9 +43,19 @@ describe("Timer", () => {
 		});
 	});
 	describe("Mis-Operations", () => {
-		test.todo("Should throw error when starting an already running timer.");
-		test.todo("Should throw error when stopping an already stopped timer.");
-		test.todo("Should throw error when pausing a stopped timer.");
-		test.todo("Should throw error when resuming a running timer.");
+		test("Should throw error when starting an already running timer.", () => {
+			timer.start();
+			expect(() => timer.start()).toThrow('Cannot start: timer is RUNNING');
+		});
+		test("Should throw error when stopping an already stopped timer.", () => {
+			expect(() => timer.stop()).toThrow('Cannot stop: timer already stopped');
+		});
+		test("Should throw error when pausing a stopped timer.", () => {
+			expect(() => timer.pause()).toThrow('Cannot pause: timer is STOPPED');
+		});
+		test("Should throw error when resuming a running timer.", () => {
+			timer.start();
+			expect(() => timer.resume()).toThrow('Cannot resume: timer is RUNNING');
+		});
 	});
 });
