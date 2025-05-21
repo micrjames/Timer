@@ -50,4 +50,4 @@ This is about all that can be done with a timer. Anything else would be done as 
 There is always room for improvement in any coding project as skills and possibilities for further functionality may come along.
 
 ## Contact
-Feel free to contact me @michaelrjamesjr on twitter
+Feel free to contact me michaelrjamesjr@icloud.com by email.

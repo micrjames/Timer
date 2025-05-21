@@ -1,4 +1,4 @@
-import { TimerState } from "./timer.defns";
+import { TimerState, Metrics, Snapshot } from "./timer.defns";
 
 class Timer {
 	private timerId: NodeJS.Timeout;
@@ -62,6 +62,27 @@ class Timer {
 	public getState(): TimerState {
 		return this.state;
 	}
+
+	public getElapsedSeconds(): number {
+       return Math.floor(this.elapsedMS / 1000);
+    }
+    public getMetrics(): Metrics {
+       return {
+           elapsedSeconds: this.getElapsedSeconds(),
+       };
+    }
+
+    public getSnapshot(): Snapshot {
+       return {
+           state: this.state,
+           elapsedMS: this.elapsedMS,
+       };
+    }
+
+    public loadSnapshot(snapshot: Snapshot) {
+       this.state = snapshot.state;
+       this.elapsedMS = snapshot.elapsedMS;
+    }
 }
 
 export { Timer };
