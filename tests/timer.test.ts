@@ -1,5 +1,5 @@
 import { Timer } from "../Timer";
-import { TimerState } from "../timer.defns";
+import { TimerState, Snapshot } from "../timer.defns";
 
 describe("Timer", () => {
 	let timer: Timer;
@@ -40,6 +40,46 @@ describe("Timer", () => {
 			state = timer.getState();
 			expectedState = TimerState.RUNNING;
 			expect(state).toBe(expectedState);
+		});
+	});
+	describe("Functionality", () => {
+		let elapsedTime: number;
+		let expectedElapsedTime: number;
+		let state: TimerState;
+		test("Should return elapsed time in seconds.", () => {
+			expectedElapsedTime = 3;
+		    jest.useFakeTimers();
+            timer.start();
+            jest.advanceTimersByTime(expectedElapsedTime * 1000); // Fast-forward 3 seconds
+			elapsedTime = timer.getElapsedSeconds();
+            expect(elapsedTime).toBe(expectedElapsedTime);
+		});
+		test("Should return metrics.", () => {
+			expectedElapsedTime = 2;
+			jest.useFakeTimers();
+            timer.start();
+            jest.advanceTimersByTime(expectedElapsedTime * 1000); // Fast-forward 2 seconds
+            const metrics = timer.getMetrics();
+			elapsedTime = metrics.elapsedSeconds;
+            expect(elapsedTime).toBe(expectedElapsedTime);
+		});
+		test("Should return a snapshot of the timer state.", () => {
+		    timer.start();
+            jest.advanceTimersByTime(1500); // Fast-forward 1.5 seconds
+            const snapshot = timer.getSnapshot();
+			state = snapshot.state;
+			elapsedTime = snapshot.elapsedMS;
+            expect(state).toBe(TimerState.RUNNING);
+            expect(elapsedTime).toBeGreaterThan(0);
+		});
+		test("Should load a snapshot correctly.", () => {
+			expectedElapsedTime = 5000
+		    const snapshot = { state: TimerState.STOPPED, elapsedMS: expectedElapsedTime };
+            timer.loadSnapshot(snapshot);
+			state = timer.getState();
+			elapsedTime = timer.getElapsedMS();
+            expect(state).toBe(TimerState.STOPPED);
+            expect(elapsedTime).toBe(expectedElapsedTime);
 		});
 	});
 	describe("Mis-Operations", () => {
