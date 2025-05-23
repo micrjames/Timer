@@ -1,5 +1,5 @@
 import { Timer } from "../Timer";
-import { TimerState, Snapshot } from "../timer.defns";
+import { TimerState } from "../timer.defns";
 
 describe("Timer", () => {
 	let timer: Timer;
@@ -7,7 +7,7 @@ describe("Timer", () => {
 	let expectedState: TimerState;
 
 	beforeEach(() => {
-		timer = new Timer(1000);	// 1 second interval
+		timer = new Timer(500);	// 1 second interval
 	    jest.useFakeTimers(); // Set up fake timers before each test
 	});
 	afterEach(() => {
@@ -120,5 +120,28 @@ describe("Timer", () => {
 			expect(() => new Timer(0)).toThrow("Interval must be a positive number");
             expect(() => new Timer(-1000)).toThrow("Interval must be a positive number");
 	   	});
+	});
+	describe("Edge Cases", () => {
+		test("Should correctly track elapsed time after starting and stopping.", done => {
+			  timer.start();
+              jest.advanceTimersByTime(2500); // Fast-forward 2.5 seconds
+              expect(timer.getElapsedMS()).toBe(2500);
+              timer.stop();
+              expect(timer.getElapsedMS()).toBe(0);
+              done();
+		});
+		test("Should correctly track elapsed time after pausing and resuming.", done => {
+              timer.start();
+              jest.advanceTimersByTime(1500); // Fast-forward 1.5 seconds
+              timer.pause();
+              expect(timer.getElapsedMS()).toBeGreaterThan(0);
+              jest.advanceTimersByTime(1000); // Fast-forward 1 second while paused, should not move past 1.5 seconds
+              timer.resume();
+              jest.advanceTimersByTime(1000); // Fast-forward another second, should now move again, by 1s to 2.5 seconds
+              expect(timer.getElapsedMS()).toBe(2500); // Should be equal to 2.5 seconds
+              timer.stop();
+              expect(timer.getElapsedMS()).toBe(0); // Should be 0, since the timer has been reset
+              done();
+		});
 	});
 });
