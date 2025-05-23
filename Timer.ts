@@ -28,7 +28,7 @@ class Timer {
 
 	public stop() {
 		if (this.state === TimerState.STOPPED) {
-            throw new Error('Cannot stop: timer already stopped');
+            throw new Error(`Cannot stop: timer already ${this.state}`);
         }
         clearInterval(this.timerId!);
         this.timerId = null;

@@ -8,11 +8,16 @@ describe("Timer", () => {
 
 	beforeEach(() => {
 		timer = new Timer(1000);	// 1 second interval
+	    jest.useFakeTimers(); // Set up fake timers before each test
 	});
 	afterEach(() => {
 		state = timer.getState();
 		if(state !== TimerState.STOPPED && state !== TimerState.PAUSED)
 			timer.stop();
+
+		jest.clearAllTimers(); // Clear all timers after each test
+        jest.runOnlyPendingTimers(); // Run any pending timers
+        jest.useRealTimers(); // Optionally revert to real timers
 	});
 
 	describe("Operations", () => {
@@ -45,7 +50,7 @@ describe("Timer", () => {
 	describe("Functionality", () => {
 		let elapsedTime: number;
 		let expectedElapsedTime: number;
-		let state: TimerState;
+
 		test("Should return elapsed time in seconds.", () => {
 			expectedElapsedTime = 3;
 		    jest.useFakeTimers();
@@ -88,7 +93,7 @@ describe("Timer", () => {
 			expect(() => timer.start()).toThrow('Cannot start: timer is RUNNING');
 		});
 		test("Should throw error when stopping an already stopped timer.", () => {
-			expect(() => timer.stop()).toThrow('Cannot stop: timer already stopped');
+			expect(() => timer.stop()).toThrow('Cannot stop: timer already STOPPED');
 		});
 		test("Should throw error when pausing a stopped timer.", () => {
 			expect(() => timer.pause()).toThrow('Cannot pause: timer is STOPPED');
@@ -97,5 +102,23 @@ describe("Timer", () => {
 			timer.start();
 			expect(() => timer.resume()).toThrow('Cannot resume: timer is RUNNING');
 		});
+		test("Should allow pausing a running timer and throw error when pausing an already paused timer.", () => {
+			timer.start(); // Start the timer
+            expect(() => timer.pause()).not.toThrow(); // First pause should succeed
+            expect(() => timer.pause()).toThrow('Cannot pause: timer is PAUSED'); // Second pause should throw an error
+		});
+		test("Should allow stopping a paused timer and throw error when stopping an already stopped timer.", () => {
+			timer.start(); // Start the timer
+            timer.pause(); // Pause the timer
+            expect(() => timer.stop()).not.toThrow(); // Stopping a paused timer should succeed
+            expect(() => timer.stop()).toThrow('Cannot stop: timer already STOPPED'); // Stopping again should throw an error
+		});
+		test("Should throw error when resuming a stopped timer.", () => {
+			expect(() => timer.resume()).toThrow('Cannot resume: timer is STOPPED');
+		});
+		test("Should throw error when initialized with non-positive interval.", () => {
+			expect(() => new Timer(0)).toThrow("Interval must be a positive number");
+            expect(() => new Timer(-1000)).toThrow("Interval must be a positive number");
+	   	});
 	});
 });
