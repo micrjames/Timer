@@ -1,7 +1,7 @@
 # Timer
-A Timer object that allows a user to start and cancel the timer, do something when the timer starts.
+A Timer object that allows users to start, pause, resume, and cancel the timer, as well as perform actions when the timer starts and stops.
 
-## Table Of Contents
+## Table of Contents
 * [General Info](#general-info)
 * [Technologies Used](#technologies-used)
 * [Features](#features)
@@ -12,42 +12,86 @@ A Timer object that allows a user to start and cancel the timer, do something wh
 * [Contact](#contact)
 
 ## General Info
-This project was developed as a Timer for a game I made. 
+This project was developed as a Timer for a game I made. It provides a flexible and easy-to-use interface for managing time-based events.
 
 ## Technologies Used
-This entire project is created as a Typescript class. It contains the necessary methods and fields to create and stop a timer.
+This project is implemented as a TypeScript class, utilizing modern JavaScript features to create a robust timer with various functionalities.
 
 ## Features
-This project is fairly simple from the point of view of the user. The user only needs to instantiate the class and set what to do when the timer starts and ends.
+The Timer class offers a simple interface for users, allowing them to:
 * Start the timer.
+* Pause the timer.
+* Resume the timer.
 * Cancel the timer.
-* Pass in a callback function to specify what to do on the timer start.
+* Pass in callback functions to specify actions to take when the timer starts, pauses, or stops.
+* Retrieve elapsed time in seconds and get metrics about the timer's state.
 
 ## Setup
-Import the class into your project in the usual way.
+To use the Timer class in your project, import it as follows:
+```javascript
+import { Timer } from "../Timer/Timer";
 ```
-const Timer = require("../Timer/Timer");
-```
+
 ## Usage
-Instantiate the timer and set the interval for which the timer fires.
+### Instantiation
+Create an instance of the Timer and set the interval for which the timer fires:
+```javascript
+const timer = new Timer(1000); // 1 second interval
 ```
-const timer = new Timer(10);
-```
-Then, start the timer and pass what to do each interval.
-```
+
+### Starting the Timer
+Start the timer and pass a callback function to specify what to do at each interval:
+```javascript
 timer.start(() => {
-  // do something here.
+  console.log("Timer ticked!");
 });
 ```
-Cancel the timer when you're done with it.
+
+### Pausing and Resuming the Timer
+You can pause the timer at any time:
+```javascript
+timer.pause();
 ```
-timer.cancel();
+To resume the timer:
+```javascript
+timer.resume();
 ```
+
+### Canceling the Timer
+Cancel the timer when you're done with it:
+```javascript
+timer.stop();
+```
+
+### Retrieving Metrics
+You can get the elapsed time in seconds and other metrics:
+```javascript
+const elapsedSeconds = timer.getElapsedSeconds();
+const metrics = timer.getMetrics();
+console.log(metrics);
+```
+
+### Getting a Snapshot
+You can retrieve the current state of the timer:
+```javascript
+const snapshot = timer.getSnapshot();
+console.log(snapshot);
+```
+
+### Loading a Snapshot
+You can restore the timer's state from a snapshot:
+```javascript
+timer.loadSnapshot(snapshot);
+```
+
 ## Project Status
-This is about all that can be done with a timer. Anything else would be done as an inherited class. There's an included project of a countdown timer.
+The Timer class is fully functional and provides essential timer features. Future enhancements could include additional functionalities such as countdown timers or integration with other game mechanics.
 
 ## Room for Improvement
-There is always room for improvement in any coding project as skills and possibilities for further functionality may come along.
+There is always room for improvement in any coding project. Potential enhancements may include:
+- Adding more detailed error handling.
+- Implementing additional timer features, such as countdown functionality.
+- Improving the user interface for better interaction.
 
 ## Contact
-Feel free to contact me michaelrjamesjr@icloud.com by email.
+Feel free to contact me at michaelrjamesjr@icloud.com for any questions or feedback regarding the Timer project.
