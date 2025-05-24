@@ -1,19 +1,24 @@
-import { TimerState, Metrics, Snapshot } from "./timer.defns";
+import { TimerState, TimerEvents, TimerConfig, TimerError, Metrics, Snapshot } from "./timer.defns";
 
 class Timer {
-	private timerId: NodeJS.Timeout;
+	private timerId: NodeJS.Timeout | null;
 	private state: TimerState;
 	private elapsedMS: number;
-	private intervalMS: number;
+    private readonly intervalMS: number;
+    private readonly events: TimerEvents;
+    private readonly maxDurationMS: number;
 
-	constructor(intervalMS: number) {
+	constructor(config: TimerConfig, events: TimerEvents = {}) {
 		this.timerId = null;
 		this.state = TimerState.STOPPED;
 		this.elapsedMS = 0;
 
-		if(intervalMS <= 0)
+		if (typeof config.intervalMS !== 'number' || config.intervalMS <= 0)
 			throw new Error("Interval must be a positive number");
-		this.intervalMS = intervalMS;
+		this.intervalMS = config.intervalMS;
+
+		this.maxDurationMS = config.maxDurationMS || Number.MAX_SAFE_INTEGER;
+		this.events = events;
 	}
 
     /**

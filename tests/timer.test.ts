@@ -7,7 +7,7 @@ describe("Timer", () => {
 	let expectedState: TimerState;
 
 	beforeEach(() => {
-		timer = new Timer(500);	// 1 second interval
+		timer = new Timer({ intervalMS: 500 });
 	    jest.useFakeTimers(); // Set up fake timers before each test
 	});
 	afterEach(() => {
@@ -117,8 +117,8 @@ describe("Timer", () => {
 			expect(() => timer.resume()).toThrow('Cannot resume: timer is STOPPED');
 		});
 		test("Should throw error when initialized with non-positive interval.", () => {
-			expect(() => new Timer(0)).toThrow("Interval must be a positive number");
-            expect(() => new Timer(-1000)).toThrow("Interval must be a positive number");
+			expect(() => new Timer({ intervalMS: 0 })).toThrow("Interval must be a positive number");
+            expect(() => new Timer({ intervalMS: -1000 })).toThrow("Interval must be a positive number");
 	   	});
 	});
 	describe("Edge Cases", () => {
