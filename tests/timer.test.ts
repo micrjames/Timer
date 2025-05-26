@@ -7,12 +7,14 @@ describe("Timer", () => {
 	let expectedState: TimerState;
 
 	beforeEach(() => {
-		timer = new Timer({ intervalMS: 500 });
+		timer = new Timer({ intervalMS: 500 });		// , {}, { log: jest.fn(), error: jest.fn() }
 	    jest.useFakeTimers(); // Set up fake timers before each test
 	});
+	// afterEach(async () => {
 	afterEach(() => {
 		state = timer.getState();
 		if(state !== TimerState.STOPPED && state !== TimerState.PAUSED)
+			// await timer.stop();
 			timer.stop();
 
 		jest.clearAllTimers(); // Clear all timers after each test
@@ -20,7 +22,14 @@ describe("Timer", () => {
         jest.useRealTimers(); // Optionally revert to real timers
 	});
 
-	describe("Operations", () => {
+	describe("Initialization", () => {
+		test("Should initialize with STOPPED state and zero elapsed time.", () => {
+			expect(timer.getState()).toBe(TimerState.STOPPED);
+			expect(timer.getElapsedMS()).toBe(0);
+		});
+	});
+
+	describe("Basic Operations", () => {
 		test("Should start the timer.", () => {
 			timer.start();
 			state = timer.getState();
@@ -46,6 +55,7 @@ describe("Timer", () => {
 			expectedState = TimerState.RUNNING;
 			expect(state).toBe(expectedState);
 		});
+		test.todo("Should reset the timer.");
 	});
 	describe("Functionality", () => {
 		let elapsedTime: number;
