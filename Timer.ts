@@ -35,7 +35,7 @@ class Timer {
 			throw new TimerError(`Cannot start: timer is ${this.state}`);	
 		}
 		this.state = TimerState.RUNNING;
-		const tick = async () => {
+		const tick = () => {
 			this.elapsedMS += this.intervalMS;
 			callback();
 			this.events.onTick?.(this.elapsedMS / 1000); // Convert to seconds
@@ -59,10 +59,13 @@ class Timer {
 		if (this.state === TimerState.STOPPED) {
 			throw new TimerError(`Cannot stop: timer already ${this.state}`);
 		}
-		clearInterval(this.timerId!);
-		this.timerId = null;
+		if(this.timerId !== null) {
+			clearInterval(this.timerId!);
+			this.timerId = null;
+		}
 		this.state = TimerState.STOPPED;
 		this.elapsedMS = 0;
+		this.events.onStop?.();
 	}
 
 	/**

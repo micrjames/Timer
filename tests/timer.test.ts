@@ -1,14 +1,23 @@
 import { Timer } from "../Timer";
-import { TimerState } from "../timer.defns";
+import { TimerState, TimerEvents } from "../timer.defns";
 
 describe("Timer", () => {
 	let timer: Timer;
 	let state: TimerState;
 	let expectedState: TimerState;
 
+	let events: TimerEvents;
+
 	beforeEach(() => {
-		timer = new Timer({ intervalMS: 500 });		// , {}, { log: jest.fn(), error: jest.fn() }
+		events = {
+			onTick: jest.fn(),
+			onStart: jest.fn(),
+			onStop: jest.fn()
+		};
+		timer = new Timer({ intervalMS: 500 }, events);		// , {}, { log: jest.fn(), error: jest.fn() }
 	    jest.useFakeTimers(); // Set up fake timers before each test
+
+		jest.clearAllMocks();
 	});
 	afterEach(() => {
 		state = timer.getState();
@@ -28,19 +37,91 @@ describe("Timer", () => {
 	});
 
 	describe("Basic Operations", () => {
-		test("Should start the timer.", async () => {
-			const callback = jest.fn();
-			timer.start(callback);
-			state = timer.getState();
-			expectedState = TimerState.RUNNING;
-			expect(state).toBe(expectedState);
+		describe("Start Method", () => {
+			let callback: () => void;
+			test("Should start the timer.", () => {
+				callback = jest.fn();
+				timer.start(callback);
+				state = timer.getState();
+				expectedState = TimerState.RUNNING;
+				expect(state).toBe(expectedState);
+			});
+			test("Should call the callback function when started.", () => {
+				callback = jest.fn();
+				timer.start(callback);
+				jest.advanceTimersByTime(1000); // Fast-forward 1 second
+				expect(callback).toHaveBeenCalled();
+			});
+			test("Should trigger onTick event with correct elapsed time.", () => {
+				callback = jest.fn();
+				timer.start(callback);
+				jest.advanceTimersByTime(1000); // Fast-forward 1 second
+				expect(events.onTick).toHaveBeenCalledWith(1); // Assuming onTick is mocked
+			});
+			test("Shoud trigger onStart event when timer starts.", () => {
+				timer.start(() => {});
+				expect(events.onStart).toHaveBeenCalled();
+			});
 		});
-		test("Should stop the timer.", () => {
-			timer.start(() => {});
-			timer.stop();
-			state = timer.getState();
-			expectedState = TimerState.STOPPED;
-			expect(state).toBe(expectedState);
+		describe("Stop Method", () => {
+			test("Should stop the timer.", () => {
+				timer.start(() => {});
+				timer.stop();
+				state = timer.getState();
+				expectedState = TimerState.STOPPED;
+				expect(state).toBe(expectedState);
+			});
+			test("Should reset elapsed time to zero after stopping.", () => {
+				timer.start(() => {});
+				jest.advanceTimersByTime(2000); // Fast-forward 2 seconds
+				timer.stop();
+				const elapsedTime = timer.getElapsedMS();
+				expect(elapsedTime).toBe(0);
+			});
+			test("Should not call the callback function after stopping.", () => {
+				const callback = jest.fn();
+				timer.start(callback);
+				timer.stop();
+				jest.advanceTimersByTime(1000); // Fast-forward 1 second
+				expect(callback).not.toHaveBeenCalled();
+			});
+			test("Should trigger onStop event when timer stops.", () => {
+				timer.start(() => {});
+				timer.stop();
+				expect(events.onStop).toHaveBeenCalled();
+			});
+			test("Should clear timer ID after stopping.", () => {
+				timer.start(() => {});
+				timer.stop();
+				expect((timer as any).timerId).toBeNull();
+			});
+			test("Should not tick after the timer has been stopped.", () => {
+				const callback = jest.fn();
+				timer.start(callback);
+				
+				// Fast-forward time to allow the timer to tick at least once
+				// 500 ms since the config sets the tick interval to 500ms
+				jest.advanceTimersByTime(500);
+				
+				// Stop the timer
+				timer.stop();
+				
+				// Fast-forward time again to ensure no further ticks occur
+				// it doesn't matter how far to advance the timer since the timer is no longer ticking
+				jest.advanceTimersByTime(1000); 
+				
+				// Check that the callback has been called only once
+				expect(callback).toHaveBeenCalledTimes(1);
+
+				// Check that the onTick event has been called only once
+				expect(events.onTick).toHaveBeenCalledTimes(1); // Assuming onTick is mocked
+
+				// Ensure that no further ticks occur after stopping
+				// as above, the timer is no longer ticking
+				jest.advanceTimersByTime(1000); // Fast-forward again
+				expect(callback).toHaveBeenCalledTimes(1); // Should still be 1
+				expect(events.onTick).toHaveBeenCalledTimes(1); // Should still be 1
+			});
 		});
 		test("Should pause and resume the timer.", () => {
 			timer.start(() => {});
@@ -102,6 +183,20 @@ describe("Timer", () => {
 			elapsedTime = timer.getElapsedMS();
             expect(state).toBe(TimerState.STOPPED);
             expect(elapsedTime).toBe(expectedElapsedTime);
+		});
+		test("Should stop the timer automatically when max duration is reached.", () => {
+			const maxDuration = 5000; // 3 seconds
+			const tickInterval = 500; // .5 seconds
+			timer = new Timer({ intervalMS: tickInterval, maxDurationMS: maxDuration }); // Set max duration
+			const callback = jest.fn();
+			
+			timer.start(callback);
+			jest.advanceTimersByTime(maxDuration); // Fast-forward to max duration
+			
+			state = timer.getState();
+			expectedState = TimerState.STOPPED;
+			expect(state).toBe(expectedState); // Check if timer is stopped
+			expect(callback).toHaveBeenCalledTimes(maxDuration/tickInterval); // Check how many times the callback was called
 		});
 	});
 	describe("Mis-Operations", () => {
