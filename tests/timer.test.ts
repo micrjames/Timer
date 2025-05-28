@@ -1,5 +1,5 @@
 import { Timer } from "../Timer";
-import { TimerState, TimerEvents } from "../timer.defns";
+import { TimerState, TimerEvents, TimerError } from "../timer.defns";
 
 describe("Timer", () => {
 	let timer: Timer;
@@ -199,7 +199,7 @@ describe("Timer", () => {
 			expect(callback).toHaveBeenCalledTimes(maxDuration/tickInterval); // Check how many times the callback was called
 		});
 	});
-	describe("Mis-Operations", () => {
+	describe("Error Handling", () => {
 		test("Should throw error when starting an already running timer.", () => {
 			timer.start(() => {});
 			expect(() => timer.start(() => {})).toThrow('Cannot start: timer is RUNNING');
@@ -254,6 +254,51 @@ describe("Timer", () => {
               timer.stop();
               expect(timer.getElapsedMS()).toBe(0); // Should be 0, since the timer has been reset
               done();
+		});
+		test("Should throw error when changing interval while running.", () => {
+			const tickInterval = (timer as any).intervalMS;
+			const expectedTickInterval = 500;
+			timer.start(() => {});
+			expect(tickInterval).toBe(expectedTickInterval);
+            expect(() => {
+				timer.setInterval(1000)
+			}).toThrow(TimerError);
+		});
+		test("Should throw error when setting an invalid interval.", () => {
+			// Test for negative interval
+			expect(() => {
+				timer.setInterval(-1000); // Attempt to set a negative interval
+			}).toThrow(TimerError);
+
+			// Test for zero interval
+			expect(() => {
+				timer.setInterval(0); // Attempt to set an interval of zero
+			}).toThrow(TimerError);
+
+			// Test for non-numeric interval
+			expect(() => {
+				// Type assertion to simulate a non-numeric value
+				timer.setInterval("invalid" as any); // Attempt to set a non-numeric interval
+			}).toThrow(TimerError);
+		});
+		test("Should handle long-running timers.", () => {
+			timer.start(() => {});
+			const twentyFourHoursInMS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+			jest.advanceTimersByTime(twentyFourHoursInMS);
+			expect(timer.getElapsedMS()).toBe(twentyFourHoursInMS); // Check for exact elapsed time
+		});
+		test("Should not overflow with large durations.", () => {
+			timer = new Timer({ intervalMS: 1000, maxDurationMS: Number.MAX_SAFE_INTEGER });
+			timer.start(() => {});
+			jest.advanceTimersByTime(10000);
+			expect(timer.getElapsedMS()).toBe(10000); // Check for exact elapsed time
+
+			// Test with a duration close to the maximum safe integer
+			const nearMaxDuration = Number.MAX_SAFE_INTEGER - 10000;
+
+			// jest.advanceTimersByTime(nearMaxDuration);
+			(timer as any).elapsedMS = nearMaxDuration;
+			expect(timer.getElapsedMS()).toBeLessThanOrEqual(Number.MAX_SAFE_INTEGER); // Ensure it does not overflow
 		});
 	});
 });

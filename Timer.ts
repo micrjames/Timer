@@ -4,7 +4,7 @@ class Timer {
 	private timerId: NodeJS.Timeout | null;
 	private state: TimerState;
 	private elapsedMS: number;
-    private readonly intervalMS: number;
+    private intervalMS: number;
     private readonly events: TimerEvents;
     private readonly maxDurationMS: number;
 
@@ -175,6 +175,31 @@ class Timer {
        this.state = snapshot.state;
        this.elapsedMS = snapshot.elapsedMS;
     }
+
+	/**
+	 * Sets a new tick interval for the timer.
+	 * 
+	 * This method allows you to change the interval at which the timer ticks. 
+	 * If the timer is currently running, it will throw an error if the new interval 
+	 * is different from the current interval. If the timer is not running, the 
+	 * interval can be changed freely.
+	 * 
+	 * @param {number} newIntervalMS - The new interval in milliseconds. 
+	 *                                  Must be a positive number.
+	 * 
+	 * @throws {TimerError} Throws an error if:
+	 * - The new interval is less than or equal to zero.
+	 * - The timer is currently running and the new interval is different from the current interval.
+	 */
+	public setInterval(newIntervalMS: number) {
+		if(typeof newIntervalMS !== 'number' || newIntervalMS <= 0)
+			throw new TimerError("Interval must be a postivie number.");
+
+		if(this.state === TimerState.RUNNING && newIntervalMS !== this.intervalMS)
+			throw new TimerError("Cannot change interval while the timer is running.");
+
+		this.intervalMS = newIntervalMS;	// Update the interval if not running
+	}
 }
 
 export { Timer };
